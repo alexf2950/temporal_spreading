@@ -30,7 +30,7 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
 
     
     recovery.clear();
-    recovery[iday +infection_period].insert(inode);
+    recovery[iday +infection_period].push_back(inode);
     
     
     return;
@@ -41,7 +41,7 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     initializeInfection(inode,iday,infection_period);
     
     detection.clear();
-    detection[iday + detection_period].insert(inode);
+    detection[iday + detection_period].push_back(inode);
     
     detectedCount=0;
     
@@ -60,9 +60,9 @@ void Graph::infectionSweep(unsigned int day, unsigned int infection_period,
     
     // Node gets marked for recovery after infection period
     if(infection_period<DAYS){
-      recovery[day+infection_period].insert(new_infectious.begin(), new_infectious.end());
+      recovery[day+infection_period].insert(recovery[day+infection_period].end(),new_infectious.begin(), new_infectious.end());
       if(detection_period<infection_period){
-         detection[day+detection_period].insert(new_infectious.begin(), new_infectious.end());
+         detection[day+detection_period].insert( detection[day+detection_period].end(),new_infectious.begin(), new_infectious.end());
       }
      
     }
@@ -122,7 +122,7 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
         if (!recovered.at(v)){
           bool rewired_to_infected = ((this)->*rewire)(u,v,day);
           if(rewired_to_infected)
-            new_infectious.insert(v);
+            new_infectious.push_back(v);
         }
           
       }

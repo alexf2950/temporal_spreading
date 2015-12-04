@@ -6,7 +6,7 @@
 
 int Recover(Graph::NodeProperty& inf,
 				Graph::NodeProperty& rec,
-				const std::set<int>& set, const int KEEP_RECOVERED)
+				const Graph::NodeSet& set, const int KEEP_RECOVERED)
 {
   int counter =0;
   for (auto it = set.begin();it!=set.end();++it)
@@ -23,19 +23,19 @@ int Recover(Graph::NodeProperty& inf,
   return counter;
 }
 
-int Unite(Graph::NodeProperty& v, const std::set<int>& set)
+int Unite(Graph::NodeProperty& v, const Graph::NodeSet& set)
 {
   bool (*infectNode)(unsigned int&) = &InfectNode;
   return UpdateVector(v,set, infectNode);
 }
 
-int Detect(Graph::NodeProperty& v, const std::set<int>& set)
+int Detect(Graph::NodeProperty& v, const Graph::NodeSet& set)
 {
   bool (*detectNode)(unsigned int&) = &DetectNode;
   return UpdateVector(v,set, detectNode);
 }
 
-int UpdateVector(Graph::NodeProperty& v, const std::set<int>& set, bool (*changeOperation)(unsigned int&))
+int UpdateVector(Graph::NodeProperty& v, const Graph::NodeSet& set, bool (*changeOperation)(unsigned int&))
 {
   int changeCounter =0;
   for (auto it = set.begin();it!=set.end();++it)

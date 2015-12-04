@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <list>
 
 
 
@@ -16,7 +17,7 @@ class Graph{
 	typedef std::array<unsigned int,97980> NodeProperty;
 	
 	// nodes
-	typedef std::set<int> NodeSet;
+	typedef std::list<int> NodeSet;
 	
 	typedef std::map<int, NodeSet> RdayMap;
 	//iterators
