@@ -13,6 +13,7 @@ class Graph{
 	unsigned int GROUP_NUMBER = 0;
 	
 	
+	
 	// edges
 	typedef std::array<unsigned int,2> EDGE;
 	typedef std::vector<EDGE> EdgeList;
@@ -32,7 +33,7 @@ class Graph{
 	
 	Graph();
 
-	Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty* _groups=NULL,
+	Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty& _groups,
 						 unsigned int _group_number=1);
 	~Graph(){};
 	
@@ -44,6 +45,7 @@ class Graph{
 	// Number of days
 	unsigned int DAYS;
 	
+	double transmission_probability = 1; 
 	
 	
 	std::vector<unsigned int> infected_count, recovered_count, detected_count;

@@ -132,48 +132,54 @@ int parseInput(Parameters& p, int argc, char** argv)
   
   std::string name = argv[1];
   
+  
   if (name=="SI")
   {
-    if (argc!=2)
+    if (argc!=5)
     {
-      std::cout << "SI doesnt take additional parameters.";
+      std::cout << "Usage: ./run 'SI' use_groups transmission_probability RANDOM_FLAG";
       return 1;
     }
     p.simulation_type = "SI";
     p.infectious_period = 2;
+    
   } else if (name=="SIR")
   {
-    if (argc!=3)
+    if (argc!=6)
     {
-      std::cout << "Usage: 'SIR' infection_period";
+      std::cout << "Usage: 'SIR' use_groups transmission_probability RANDOM_FLAG infection_period";
       return 1;
     }
     p.simulation_type = "SIR";
-    p.infectious_period = atoi(argv[2]);
+    p.infectious_period = atoi(argv[5]);
   } else if (name=="SIS")
   {
-    if (argc!=3)
+    if (argc!=6)
     {
-      std::cout << "Usage: 'SIS' infection_period";
+      std::cout << "Usage: 'SIS' use_groups transmission_probability RANDOM_FLAG infection_period";
       return 1;
     }
     p.simulation_type = "SIS";
-    p.infectious_period = atoi(argv[2]);
+    p.infectious_period = atoi(argv[5]);
   } else if (name=="SIS_rewire")
   {
-    if (argc!=4)
+    if (argc!=7)
     {
-      std::cout << "Usage: 'SIS_rewire' infection_period detection_period";
+      std::cout << "Usage: 'SIS_rewire' use_groups transmission_probability RANDOM_FLAG infection_period detection_period";
       return 1;
     }
     p.simulation_type = "SIS_rewire";
-    p.infectious_period = atoi(argv[2]);
-    p.detection_period = atoi(argv[3]);
+    p.infectious_period = atoi(argv[5]);
+    p.detection_period = atoi(argv[6]);
   } else
   {
     std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire'}";
     return 1;
   }
+  
+  p.use_groups = atoi(argv[2]);
+  p.transmission_probability = atoi(argv[3]);
+  p.RANDOM_FLAG = atoi(argv[4]);
   
   return 0;
 } 
@@ -193,12 +199,14 @@ int main(int argc, char** argv)
   
   
   const unsigned int NODE_NUMBER = 97980;
+  const unsigned int EDGE_NUMBER = 6359697;
+  //const unsigned int EDGE_NUMBER = 747746;
   
   std::string OUTPUT_FILENAME = "/home/afengler/Dokumente/traversal/SIS/"+ parameters.simulation_type +
                                   "_infection_period="+ std::to_string(parameters.infectious_period) +
                                   "_detection_period="+ std::to_string(parameters.detection_period) +".txt";
   
-  
+  const unsigned int DAY_NUMBER = 1460;
   
   parameters.day_zero = 0;
   parameters.sample_size = 100;
@@ -207,27 +215,36 @@ int main(int argc, char** argv)
   
   
   
-  Graph::DayEdges edges(1461);
+  Graph::DayEdges edges(DAY_NUMBER);
   
-  ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges);
+  unsigned int RANDOM_FLAG = parameters.RANDOM_FLAG; // 0 means original network, 1 temporal randomized
+  
+  ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
+  //ReadEdgesTxt(std::string("/home/afengler/Dokumente/traversal/edges_subset.txt"), edges);
   //WriteEdgesToFile(edges,std::string("edges_c.dat"));
   
   
   Graph::NodeProperty groups;
   unsigned int group_number;
-  group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups.txt"),
-      groups);
+
   
-  //Graph graph = Graph(edges, NODE_NUMBER, &groups, group_number);
-  Graph graph = Graph(edges, NODE_NUMBER);
+
   
+  if (parameters.use_groups)
+  {
+      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups.txt"),
+                                groups);
+  }
+  
+  Graph graph = Graph(edges, NODE_NUMBER, groups, group_number);
+  graph.transmission_probability = parameters.transmission_probability;
   
   /*std::ofstream file;
   file.open (parameters.out_file_name);
 
   
   
-  for(unsigned int i = 1;i<parameters.infectious_period && i<150;++i){
+  for(unsigned int i = 1;i<parameters.infectious_period && i<30;++i){
     parameters.detection_period=i;
     auto mean_final_fraction = GetEndemicFraction(graph,parameters);
     file << mean_final_fraction << " ";

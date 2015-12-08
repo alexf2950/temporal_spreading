@@ -2,18 +2,19 @@
 #include <string> 
 #include <cstdio>
 #include <fstream>
+#include <sstream>
+#include <random>
 #include "graph.h"
 #include "custom_io.h"
 
+std::default_random_engine def_generator;
 
-const unsigned int EDGE_NUMBER = 6359697;
-const unsigned int MAX_DAYS = 1460;
-const unsigned int NODE_NUMBER = 97980;
+
 
 void WriteEdgesToFile(Graph::DayEdges& edges,std::string filename){
 	FILE* file= fopen(filename.c_str(),"wb");
 	unsigned int edgeCounter =0;
-	for(unsigned int day = 0;day<MAX_DAYS;++day){
+	for(unsigned int day = 0;day<edges.size();++day){
 		auto day_list = edges[day];
 		for (auto edge = day_list.begin();edge!=day_list.end();++edge){
 			fwrite(&day,sizeof(int),1,file);
@@ -26,7 +27,7 @@ void WriteEdgesToFile(Graph::DayEdges& edges,std::string filename){
 	std::cout << edgeCounter << "\n";
 }
 
-void ReadEdgesC(std::string filename, Graph::DayEdges& edges ){
+void ReadEdgesC(std::string filename, Graph::DayEdges& edges, const int EDGE_NUMBER, const int RANDOM_FLAG){
 	std::vector<unsigned int> data(EDGE_NUMBER*3);
 	
 	FILE* file = fopen(filename.c_str(),"rb");
@@ -40,10 +41,44 @@ void ReadEdgesC(std::string filename, Graph::DayEdges& edges ){
 		unsigned int source = data[3*i+1];
 		unsigned int target = data[3*i+2];
 		
+		if (RANDOM_FLAG == 1)
+		{
+			
+			std::uniform_int_distribution<int> distribution(0,edges.size()-1);
+			day = distribution(def_generator);
+		}
 		
 		edges[day].push_back(Graph::EDGE({source,target}));
 		
 	}
+	
+	return;
+}
+
+void ReadEdgesTxt(std::string filename, Graph::DayEdges& edges ){
+	std::ifstream file;
+	file.open (filename, std::ifstream::in); 
+	
+	std::string line, number;
+	
+	unsigned int index=0;
+	unsigned int day,source,target;
+
+	while(std::getline(file,line,'\n'))
+    {	
+		std::istringstream line_iss(line);
+		std::getline(line_iss,number, '\t');
+		source = stoi(number);
+		std::getline(line_iss,number, '\t');
+		target = stoi(number);
+		std::getline(line_iss,number, '\t');
+		day = stoi(number);
+		
+		edges[day].push_back(Graph::EDGE({source,target}));
+    }
+	
+	
+	file.close();
 	
 	return;
 }

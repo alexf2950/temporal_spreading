@@ -8,20 +8,20 @@
 #include <array>
 
 
-Graph::Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty* _groups,
+Graph::Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty& _groups,
                   unsigned int _group_number):
 	edges(_edges),
   NODE_NUMBER(_NODE_NUMBER)
 {
 	DAYS = edges.size();
   // initialize with zeros
-  if(_groups==NULL){
+  if(_group_number<=1){
     GROUP_NUMBER = 1;
     groups.fill(0);
     countGroups();
   } else
   {
-    groups = *_groups;
+    groups = _groups;
     GROUP_NUMBER = _group_number;
     countGroups();
   } 
@@ -146,7 +146,13 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
         if (!recovered.at(v)){
           bool rewired_to_infected = ((this)->*rewire)(u,v,day);
           if(rewired_to_infected)
-            new_infectious.push_back(v);
+          {
+            if (transmission_probability==1 || SampleProbability(transmission_probability)==1)
+            {       
+              new_infectious.push_back(v);
+              
+            }
+          }
         }
           
       }
