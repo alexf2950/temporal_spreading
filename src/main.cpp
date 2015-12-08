@@ -20,12 +20,24 @@ double getMean(std::vector<unsigned int>& vector){
   for(unsigned int i = 0;i<vector.size();++i){
     mean+=vector[i];
   }
-  return mean/=vector.size();
+  return mean/vector.size();
 }
 
-std::vector<unsigned int> CallSimulation(Graph& graph, Parameters& p)
+double GetFraction(std::vector<unsigned int>& vector,bool (*condition)(unsigned int))
 {
-  std::vector<unsigned int> result;
+  double count = 0;
+  for(unsigned int i = 0;i<vector.size();++i){
+    if(condition(vector[i]))
+    {
+      ++count;
+    }
+  }
+  return count/(double)vector.size();
+}
+
+Graph::GroupResult CallSimulation(Graph& graph, Parameters& p)
+{
+  Graph::GroupResult result;
   if (p.simulation_type == "SI")
   { 
       result = graph.SI_simulation(p.patient_zero, p.day_zero);
@@ -58,13 +70,23 @@ std::vector<unsigned int> GetFinalInfectionSizes(Graph& graph, Parameters& p)
   for (unsigned int n=0;n<p.sample_size; ++n)
   {
     p.patient_zero = n;
-    std::vector<unsigned int> infected_recovered_farms = CallSimulation(graph,p);
-    final_endemic_fraction[n]=infected_recovered_farms[infected_recovered_farms.size()-1];
+    auto infected_recovered_farms = CallSimulation(graph,p);
+    for (auto it= infected_recovered_farms[infected_recovered_farms.size()-1].begin();
+              it!=infected_recovered_farms[infected_recovered_farms.size()-1].end();++it)
+    {
+      final_endemic_fraction[n]+=(*it);
+    }
+    
   }
   
   return final_endemic_fraction;
 }
 
+double GetEndemicFraction(Graph& graph, Parameters& p)
+{
+  auto final_sizes = GetFinalInfectionSizes(graph, p);
+  return 1-GetFraction(final_sizes,[](unsigned int size){return size==0;});
+}
 
 double GetMeanFinalInfectionSize(Graph& graph, Parameters& p)
 {  
@@ -83,13 +105,16 @@ void printEndemicFractions(Graph& graph, Parameters& p)
   for (unsigned int n=0;n<p.sample_size; ++n)
   {
     p.patient_zero = n;
-    std::vector<unsigned int> infected_recovered_farms = CallSimulation(graph,p);
-    for (int i = 1; i < infected_recovered_farms.size(); ++i)
+    auto infected_recovered_farms = CallSimulation(graph,p);
+    for (int j = 0; j < infected_recovered_farms[0].size(); ++j)
     {
-      file << infected_recovered_farms[i] << " ";
+      for (int i = 1; i < infected_recovered_farms.size(); ++i)
+      {
+        file << infected_recovered_farms[i][j] << " ";
+      }
+      
     }
     file << "\n";
-
   }
 
 
@@ -115,6 +140,7 @@ int parseInput(Parameters& p, int argc, char** argv)
       return 1;
     }
     p.simulation_type = "SI";
+    p.infectious_period = 2;
   } else if (name=="SIR")
   {
     if (argc!=3)
@@ -143,6 +169,10 @@ int parseInput(Parameters& p, int argc, char** argv)
     p.simulation_type = "SIS_rewire";
     p.infectious_period = atoi(argv[2]);
     p.detection_period = atoi(argv[3]);
+  } else
+  {
+    std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire'}";
+    return 1;
   }
   
   return 0;
@@ -182,21 +212,29 @@ int main(int argc, char** argv)
   ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges);
   //WriteEdgesToFile(edges,std::string("edges_c.dat"));
   
-  Graph graph = Graph(edges,NODE_NUMBER);
   
-  //std::ofstream file;
-  //file.open (parameters.out_file_name);
+  Graph::NodeProperty groups;
+  unsigned int group_number;
+  group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups.txt"),
+      groups);
+  
+  //Graph graph = Graph(edges, NODE_NUMBER, &groups, group_number);
+  Graph graph = Graph(edges, NODE_NUMBER);
   
   
-  /*
-  for(unsigned int i = 1;i<index && i<150;++i){
+  /*std::ofstream file;
+  file.open (parameters.out_file_name);
+
+  
+  
+  for(unsigned int i = 1;i<parameters.infectious_period && i<150;++i){
     parameters.detection_period=i;
-    unsigned int mean_final_fraction = GetMeanFinalInfectionSize(graph, parameters);
+    auto mean_final_fraction = GetEndemicFraction(graph,parameters);
     file << mean_final_fraction << " ";
   }
   
-  file.close();
-  */
+  file.close();*/
+  
   printEndemicFractions(graph, parameters);
   
   return 0;

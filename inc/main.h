@@ -16,12 +16,14 @@ struct Parameters{
   std::string simulation_type;
 };
 
-int 						parseInput(Parameters& p, int argc, char** argv);
+int 						  parseInput(Parameters& p, int argc, char** argv);
 double 						getMean(std::vector<unsigned int>& vector);
+double            GetFraction(std::vector<unsigned int>& vector,bool (*condition)(unsigned int));
 
-std::vector<unsigned int> 	CallSimulation(Graph& graph, Parameters& p);
-std::vector<unsigned int> 	GetFinalInfectionSizes(Graph& graph, Parameters& p);
-double 						GetMeanFinalInfectionSize(Graph& graph, Parameters& p);
-void 						printEndemicFractions(Graph& graph, Parameters& p);
+Graph::GroupResult 	  CallSimulation(Graph& graph, Parameters& p);
+std::vector<unsigned int> 	  GetFinalInfectionSizes(Graph& graph, Parameters& p);
+double 						    GetMeanFinalInfectionSize(Graph& graph, Parameters& p);
+double                GetEndemicFraction(Graph& graph, Parameters& p);
+void 						      printEndemicFractions(Graph& graph, Parameters& p);
 
 #endif

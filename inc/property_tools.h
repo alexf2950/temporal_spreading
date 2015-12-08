@@ -7,15 +7,15 @@
 
 
 
-int Recover(Graph::NodeProperty& inf,
-				Graph::NodeProperty& rec,
+int Recover(Graph* graph,
 				const Graph::NodeSet& set, const int KEEP_RECOVERED);
-int Unite(Graph::NodeProperty& v, const Graph::NodeSet& set);
+int Unite(Graph* graph, const Graph::NodeSet& set);
 
 
-int Detect(Graph::NodeProperty& v, const Graph::NodeSet& set);
+int Detect(Graph* graph, const Graph::NodeSet& set);
 
-int UpdateVector(Graph::NodeProperty& v, const Graph::NodeSet& set, bool (*changeOperation)(unsigned int&));
+int UpdateVector(Graph::NodeProperty& v, const Graph::NodeProperty& groups,
+					 const Graph::NodeSet& set, std::vector<unsigned int>& countVector,  bool (*changeOperation)(unsigned int&));
 
 bool InfectNode(unsigned int& node_status);
 bool DetectNode(unsigned int& node_status);

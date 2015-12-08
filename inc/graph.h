@@ -10,6 +10,9 @@
 
 class Graph{
 	public:
+	unsigned int GROUP_NUMBER = 0;
+	
+	
 	// edges
 	typedef std::array<unsigned int,2> EDGE;
 	typedef std::vector<EDGE> EdgeList;
@@ -23,12 +26,14 @@ class Graph{
 	//iterators
 	typedef RdayMap::iterator RdayIter;
 
+	typedef std::vector<std::vector<unsigned int>> GroupResult; 
 	
 	
 	
 	Graph();
 
-	Graph(DayEdges& _edges, unsigned int _NODE_NUMBER);
+	Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty* _groups=NULL,
+						 unsigned int _group_number=1);
 	~Graph(){};
 	
 	
@@ -39,11 +44,19 @@ class Graph{
 	// Number of days
 	unsigned int DAYS;
 	
-	unsigned int infectedCount, recoveredCount, detectedCount;
 	
+	
+	std::vector<unsigned int> infected_count, recovered_count, detected_count;
+	unsigned int summed_infected_count;
+	
+	std::vector<unsigned int> group_counts;
 	
 	// Vectors representing the state of the infection
 	NodeProperty infectious,recovered;
+	
+	
+	NodeProperty groups;
+	
 	
 	// Map for marking the recovery day of an infected node
 	RdayMap recovery,detection;
@@ -65,13 +78,13 @@ class Graph{
 	
 	NodeSet infect(unsigned int day,bool (Graph::*rewire)(int,int,unsigned int));
 	
-	std::vector<unsigned int> SI_simulation(int inode, int iday);
+	GroupResult 				SI_simulation(int inode, int iday);
 	
-	std::vector<unsigned int> SIX_simulation(int inode, int iday, unsigned int infection_period, int KEEP_RECOVERED);
-	std::vector<unsigned int> SIS_simulation(int inode, int iday, unsigned int infection_period);
-	std::vector<unsigned int> SIR_simulation(int inode, int iday, unsigned int infection_period);
+	GroupResult 				SIX_simulation(int inode, int iday, unsigned int infection_period, int KEEP_RECOVERED);
+	GroupResult 				SIS_simulation(int inode, int iday, unsigned int infection_period);
+	GroupResult 				SIR_simulation(int inode, int iday, unsigned int infection_period);
 	
-	std::vector<unsigned int> SIS_rewire_simulation(	int inode,
+	GroupResult 				SIS_rewire_simulation(	int inode,
 														int iday,
 														unsigned int infection_period,
 														unsigned int detection_period
@@ -79,6 +92,11 @@ class Graph{
 	
 	void initializeInfection(int inode,int iday, unsigned int infection_period, unsigned int detection_period);
 	void initializeInfection(int inode,int iday, unsigned int infection_period);
+	
+	void countGroups();
+	
+	
+	void InitializeResultVector(unsigned int group_number, Graph::GroupResult& result);
 	
 	bool _rewire(int source, int target, unsigned int day);
 	

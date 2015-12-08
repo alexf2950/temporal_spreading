@@ -1,11 +1,14 @@
 #include <iostream>
 #include <string> 
 #include <cstdio>
+#include <fstream>
 #include "graph.h"
 #include "custom_io.h"
 
+
 const unsigned int EDGE_NUMBER = 6359697;
 const unsigned int MAX_DAYS = 1460;
+const unsigned int NODE_NUMBER = 97980;
 
 void WriteEdgesToFile(Graph::DayEdges& edges,std::string filename){
 	FILE* file= fopen(filename.c_str(),"wb");
@@ -43,4 +46,31 @@ void ReadEdgesC(std::string filename, Graph::DayEdges& edges ){
 	}
 	
 	return;
+}
+
+unsigned int ReadGroups(std::string filename, Graph::NodeProperty& groups ){
+
+	
+	std::ifstream file;
+	file.open (filename, std::ifstream::in); 
+	
+	std::string cell;
+	unsigned int max_group = 0;
+	
+	unsigned int index=0;
+
+	while(std::getline(file,cell,','))
+    {
+		unsigned int group = stoi(cell);
+        groups[index] = group;
+		if(group>max_group)
+			max_group=group;
+		++index;
+    }
+	
+	
+	file.close();
+	
+	
+	return max_group+1;
 }

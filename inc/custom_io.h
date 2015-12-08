@@ -7,4 +7,6 @@
 void WriteEdgesToFile(Graph::DayEdges& edges,std::string filename);
 void ReadEdgesC(std::string filename, Graph::DayEdges& edges );
 
+unsigned int ReadGroups(std::string filename, Graph::NodeProperty& groups );
+
 #endif

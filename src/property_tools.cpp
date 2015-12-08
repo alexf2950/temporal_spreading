@@ -4,18 +4,33 @@
 #include "property_tools.h"
  
 
-int Recover(Graph::NodeProperty& inf,
-				Graph::NodeProperty& rec,
+int Recover(Graph* graph,
 				const Graph::NodeSet& set, const int KEEP_RECOVERED)
 {
-  int counter =0;
+  Graph::NodeProperty& inf = graph->infectious;
+  Graph::NodeProperty& rec = graph->recovered;
+  
+  Graph::NodeProperty& groups = graph->groups;
+  
+  std::vector<unsigned int>& infected_count = graph->infected_count;
+  std::vector<unsigned int>& detected_count = graph->detected_count;
+  std::vector<unsigned int>& recovered_count = graph->recovered_count;
+  
+  unsigned int counter =0;
+  unsigned int group =0;
   for (auto it = set.begin();it!=set.end();++it)
   {
     if (inf[*it]>0){
+      group = groups[*it];
+      --infected_count[group];
+      --detected_count[group];
       ++counter;
       inf[*it] = 0;
-      if(KEEP_RECOVERED)
+      if(KEEP_RECOVERED){
         rec[*it] = 1;
+        ++recovered_count[group];
+      }
+        
       
     } 
     
@@ -23,25 +38,37 @@ int Recover(Graph::NodeProperty& inf,
   return counter;
 }
 
-int Unite(Graph::NodeProperty& v, const Graph::NodeSet& set)
+int Unite(Graph* graph, const Graph::NodeSet& set)
 {
+  Graph::NodeProperty& v = graph->infectious;
+  Graph::NodeProperty& groups = graph->groups;
+  std::vector<unsigned int>& infected_count = graph->infected_count;
+  
   bool (*infectNode)(unsigned int&) = &InfectNode;
-  return UpdateVector(v,set, infectNode);
+  return UpdateVector(v, groups, set, infected_count, infectNode);
 }
 
-int Detect(Graph::NodeProperty& v, const Graph::NodeSet& set)
+int Detect(Graph* graph, const Graph::NodeSet& set)
 {
+  Graph::NodeProperty& v = graph->infectious;
+  Graph::NodeProperty& groups = graph->groups;
+  std::vector<unsigned int>& detected_count = graph->detected_count;
+  
   bool (*detectNode)(unsigned int&) = &DetectNode;
-  return UpdateVector(v,set, detectNode);
+  return UpdateVector(v, groups, set, detected_count, detectNode);
 }
 
-int UpdateVector(Graph::NodeProperty& v, const Graph::NodeSet& set, bool (*changeOperation)(unsigned int&))
+int UpdateVector(Graph::NodeProperty& v, const Graph::NodeProperty& groups,
+					 const Graph::NodeSet& set, std::vector<unsigned int>& countVector,  bool (*changeOperation)(unsigned int&))
 {
-  int changeCounter =0;
+  unsigned int changeCounter=0;
   for (auto it = set.begin();it!=set.end();++it)
   {
-    if(changeOperation(v[*it]))
+    if(changeOperation(v[*it])){
+      ++countVector[groups[*it]];
       ++changeCounter;
+    }
+      
     
   }
   return changeCounter;

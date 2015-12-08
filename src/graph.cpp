@@ -8,12 +8,24 @@
 #include <array>
 
 
-Graph::Graph(DayEdges& _edges, unsigned int _NODE_NUMBER):
+Graph::Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty* _groups,
+                  unsigned int _group_number):
 	edges(_edges),
   NODE_NUMBER(_NODE_NUMBER)
 {
 	DAYS = edges.size();
   // initialize with zeros
+  if(_groups==NULL){
+    GROUP_NUMBER = 1;
+    groups.fill(0);
+    countGroups();
+  } else
+  {
+    groups = *_groups;
+    GROUP_NUMBER = _group_number;
+    countGroups();
+  } 
+  
   //infectious = NodeProperty(NODE_NUMBER,0);
   //recovered = NodeProperty(NODE_NUMBER,0);
 }
@@ -23,10 +35,12 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     infectious.fill(0);
     infectious.at(inode) = 1;
     
-    infectedCount=1;
+    summed_infected_count = 1;
+    infected_count.assign(GROUP_NUMBER,0);
+    infected_count[groups[inode]]=1;
     
     recovered.fill(0);
-    recoveredCount=0;
+    recovered_count.assign(GROUP_NUMBER,0);
 
     
     recovery.clear();
@@ -43,9 +57,20 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     detection.clear();
     detection[iday + detection_period].push_back(inode);
     
-    detectedCount=0;
+    detected_count.assign(GROUP_NUMBER,0);
     
     return;
+}
+
+void Graph::countGroups()
+{
+  group_counts.resize(GROUP_NUMBER);
+  for(unsigned int i = 0;i<groups.size();++i)
+  {
+    ++group_counts[groups[i]];
+  }
+  
+  return;
 }
 
 void Graph::infectionSweep(unsigned int day, unsigned int infection_period,
@@ -53,10 +78,10 @@ void Graph::infectionSweep(unsigned int day, unsigned int infection_period,
                            bool (Graph::*rewire)(int,int,unsigned int))
 {
 	// infection
-	if (infectedCount>0)
+	if (summed_infected_count>0)
 	{
 		NodeSet new_infectious = infect(day,rewire);
-		infectedCount +=Unite(infectious, new_infectious);
+		summed_infected_count +=Unite(this, new_infectious);
     
     // Node gets marked for recovery after infection period
     if(infection_period<DAYS){
@@ -84,7 +109,7 @@ void Graph::detectionSweep(unsigned int day)
     RdayIter it = detection.find(day);
     if (it != detection.end())
     {
-      detectedCount +=Detect(infectious, (*it).second);
+      Detect(this, (*it).second);
       
     }
 }    
@@ -95,10 +120,9 @@ void Graph::removalPrototype(RdayMap& map,unsigned int day,const int KEEP_RECOVE
     RdayIter it = map.find(day);
     if (it != map.end())
     {
-      int recovers = Recover(infectious,recovered, (*it).second,KEEP_RECOVERED);
-      infectedCount -=recovers;
-      detectedCount -=recovers;
-      recoveredCount += recovers;
+      int recovers = Recover(this, (*it).second,KEEP_RECOVERED);
+      summed_infected_count -=recovers;
+
     }
 }
   
@@ -135,10 +159,10 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
 *  SI Simulation
 *   Cuts of the recovered part of SIR output
 ********************************************************************/
-std::vector<unsigned int> Graph::SI_simulation(int inode, int iday)
+Graph::GroupResult Graph::SI_simulation(int inode, int iday)
 {
   auto infected_recovered_farms = SIR_simulation(inode,iday,DAYS);
-  auto infectedFarms = std::vector<unsigned int>(infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
+  auto infectedFarms = Graph::GroupResult (infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
   
   return infectedFarms;
 }
@@ -147,12 +171,12 @@ std::vector<unsigned int> Graph::SI_simulation(int inode, int iday)
 *  SIS Simulation
 *  Cuts of the recovered part of SIX output
 ********************************************************************/
-std::vector<unsigned int> Graph::SIS_simulation(int inode, int iday, unsigned int infection_period)
+Graph::GroupResult Graph::SIS_simulation(int inode, int iday, unsigned int infection_period)
 {
   auto infected_recovered_farms = SIX_simulation(inode,iday,infection_period,0);
  
   // discard the recovered part
-  auto infectedFarms = std::vector<unsigned int>(infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
+  auto infectedFarms = Graph::GroupResult(infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
   
   return infectedFarms;
 }
@@ -163,7 +187,7 @@ std::vector<unsigned int> Graph::SIS_simulation(int inode, int iday, unsigned in
 *  SIR Simulation
 *
 ********************************************************************/
-std::vector<unsigned int> Graph::SIR_simulation(int inode, int iday, unsigned int infection_period)
+Graph::GroupResult Graph::SIR_simulation(int inode, int iday, unsigned int infection_period)
 {
   return SIX_simulation(inode,iday,infection_period,1);
 }
@@ -174,11 +198,14 @@ std::vector<unsigned int> Graph::SIR_simulation(int inode, int iday, unsigned in
 *  Template for SIR and SIS simulations   
 *
 ********************************************************************/
-std::vector<unsigned int> Graph::SIX_simulation(int inode, int iday, unsigned int infection_period,const int KEEP_RECOVERED)
+Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infection_period,const int KEEP_RECOVERED)
 {
-  auto infected_recovered_farms = std::vector<unsigned int>(2*DAYS);
+  auto infected_recovered_farms = Graph::GroupResult(2*DAYS);
   
-  initializeInfection(inode,iday,infection_period);
+  InitializeResultVector(GROUP_NUMBER, infected_recovered_farms);
+  
+  
+  initializeInfection(inode,iday,infection_period,0);
 
   for (unsigned int day = iday; day < DAYS; day++)
   {     
@@ -187,8 +214,12 @@ std::vector<unsigned int> Graph::SIX_simulation(int inode, int iday, unsigned in
     if(infection_period<DAYS){
       recoverySweep(day,KEEP_RECOVERED);
     }
-    infected_recovered_farms[day-iday] = infectedCount;
-    infected_recovered_farms[DAYS+(day-iday)] = recoveredCount;
+    
+    for(unsigned int i=0;i<GROUP_NUMBER;++i){
+      infected_recovered_farms[day-iday][i] = infected_count[i];
+      infected_recovered_farms[DAYS+(day-iday)][i] = recovered_count[i];
+    }
+    
   }
 
   return infected_recovered_farms;
@@ -196,7 +227,7 @@ std::vector<unsigned int> Graph::SIX_simulation(int inode, int iday, unsigned in
 
 
 
-std::vector<unsigned int> Graph::SIS_rewire_simulation(	int inode,
+Graph::GroupResult Graph::SIS_rewire_simulation(	int inode,
 														int iday,
 														unsigned int infection_period,
 														unsigned int detection_period
@@ -204,7 +235,9 @@ std::vector<unsigned int> Graph::SIS_rewire_simulation(	int inode,
 { 
   bool (Graph::*rewire)(int,int,unsigned int) = &Graph::_rewire;
  
-  auto infected_farms = std::vector<unsigned int>(DAYS);
+  auto infected_farms = Graph::GroupResult(DAYS);
+  InitializeResultVector(GROUP_NUMBER, infected_farms);
+  
   
   initializeInfection(inode,iday,infection_period,detection_period);
   
@@ -215,7 +248,9 @@ std::vector<unsigned int> Graph::SIS_rewire_simulation(	int inode,
     detectionSweep(day);
     recoverySweep(day,0);
     
-    infected_farms[day-iday] = infectedCount;
+    for(unsigned int i=0;i<GROUP_NUMBER;++i){
+      infected_farms[day-iday][i] = infected_count[i];
+    }
   }
   
   return infected_farms;
@@ -226,14 +261,28 @@ std::vector<unsigned int> Graph::SIS_rewire_simulation(	int inode,
 bool Graph::_rewire(int source, int target, unsigned int day)
 {
   int infection_status = infectious.at(source);
+  
   if(infection_status==2){
-    unsigned int latent_infected = infectedCount-detectedCount;
-    unsigned int seemingly_uninfected = NODE_NUMBER-detectedCount;
+    
+    unsigned int latent_infected = infected_count[groups[source]]-detected_count[groups[source]];
+    unsigned int seemingly_uninfected = group_counts[groups[source]]-detected_count[groups[source]];
+    
     double infection_probability = latent_infected/(double)seemingly_uninfected;    
+    
     if(SampleProbability(infection_probability)==0){
       return false;
+      
     }
   }
 
   return true;
+}
+
+void Graph::InitializeResultVector(unsigned int group_number, Graph::GroupResult& result)
+{
+  
+  for(unsigned int i=0;i<result.size();++i)
+  {
+      result[i].resize(group_number);
+  }
 }
