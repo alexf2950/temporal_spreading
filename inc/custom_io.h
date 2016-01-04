@@ -11,4 +11,7 @@ void ReadEdgesC(std::string filename, Graph::DayEdges& edges, const int EDGE_NUM
 
 unsigned int ReadGroups(std::string filename, Graph::NodeProperty& groups );
 
+void aggregateNetwork(Graph::DayEdges& edges, Graph::NodeProperty& groups,
+ unsigned int group_number, std::string out_filename);
+
 #endif

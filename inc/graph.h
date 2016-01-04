@@ -66,6 +66,7 @@ class Graph{
 	
 	void infectionSweep(unsigned int day, unsigned int infection_period,
 						unsigned int detection_period=1460,
+						unsigned int STATIC=0,
 						bool (Graph::*rewire)(int,int,unsigned int)=&Graph::defaultFunc);
 	
 	// KEEP_RECOVERED = 1 -> SIR, =0 -> SIS
@@ -81,16 +82,33 @@ class Graph{
 	
 	NodeSet infect(unsigned int day,bool (Graph::*rewire)(int,int,unsigned int));
 	
-	GroupResult 				SI_simulation(int inode, int iday);
+	NodeSet staticInfect();
 	
-	GroupResult 				SIX_simulation(int inode, int iday, unsigned int infection_period, int KEEP_RECOVERED);
-	GroupResult 				SIS_simulation(int inode, int iday, unsigned int infection_period);
-	GroupResult 				SIR_simulation(int inode, int iday, unsigned int infection_period);
+	GroupResult 	SI_simulation(int inode, int iday, unsigned int STATIC=0);
 	
-	GroupResult 				SIS_rewire_simulation(	int inode,
+	GroupResult 	SIX_simulation(int inode, int iday,
+		 unsigned int infection_period, int KEEP_RECOVERED,
+		 unsigned int STATIC=0);
+	GroupResult 	SIS_simulation(int inode, int iday, unsigned int infection_period, unsigned int STATIC=0);
+	GroupResult 	SIR_simulation(int inode, int iday, unsigned int infection_period, unsigned int STATIC=0);
+	
+	GroupResult 	SIS_rewire_simulation(	int inode,
 														int iday,
 														unsigned int infection_period,
 														unsigned int detection_period
+													 );
+	
+	GroupResult 	SIR_rewire_simulation(	int inode,
+														int iday,
+														unsigned int infection_period,
+														unsigned int detection_period
+													 );
+													 
+	GroupResult 	SIX_rewire_simulation(	int inode,
+														int iday,
+														unsigned int infection_period,
+														unsigned int detection_period,
+                            							const unsigned int KEEP_RECOVERED
 													 );
 	
 	void initializeInfection(int inode,int iday, unsigned int infection_period, unsigned int detection_period);

@@ -13,7 +13,7 @@ Graph::Graph(DayEdges& _edges, unsigned int _NODE_NUMBER, NodeProperty& _groups,
 	edges(_edges),
   NODE_NUMBER(_NODE_NUMBER)
 {
-	DAYS = edges.size();
+	DAYS = 1460;
   // initialize with zeros
   if(_group_number<=1){
     GROUP_NUMBER = 1;
@@ -80,13 +80,22 @@ void Graph::countGroups()
 
 void Graph::infectionSweep(unsigned int day, unsigned int infection_period,
                            unsigned int detection_period, 
+                           unsigned int STATIC,
                            bool (Graph::*rewire)(int,int,unsigned int))
 {
 	// infection
 	if (summed_infected_count>0)
 	{
-		NodeSet new_infectious = infect(day,rewire);
-		summed_infected_count += Unite(this, new_infectious);
+		NodeSet new_infectious;
+    if(STATIC)
+    {
+      new_infectious= staticInfect();
+    } else
+    {
+      new_infectious= infect(day,rewire);
+    }
+
+		summed_infected_count +=Unite(this, new_infectious);
     
     // Node gets marked for recovery after infection period
     if(infection_period<DAYS){
@@ -130,6 +139,49 @@ void Graph::removalPrototype(RdayMap& map,unsigned int day,const int KEEP_RECOVE
 
     }
 }
+
+Graph::NodeSet Graph::staticInfect()
+{
+  NodeSet new_infectious;
+  
+  DayEdges out_list = edges;
+  if (infectious.size()>0)
+  {
+    for (unsigned int s = 0; s != infectious.size(); ++s)
+    {
+      if(infectious[s] && out_list[s].size()>0)
+      {
+        int u = s; //source
+        for(auto t = out_list[s].begin();t!=out_list[s].end();++t)
+        {
+          int v = (*t)[1]; //target
+          // infections happening here
+          // add target to infectious if source is infected and target is neither infected and nor recovered
+          if (!infectious.at(v))       // This is decides whether or not reinfection is possible
+          {
+            if (!recovered.at(v)){
+              
+                //std::cout << transmission_probability << "\n";  
+                if (transmission_probability==1 || SampleProbability(transmission_probability)==1)
+                {   
+                    
+                  new_infectious.push_back(v);
+                  
+                }
+              
+            }
+              
+          }
+        }
+      }
+        
+        
+      
+      
+    }
+  }
+  return new_infectious;
+}
   
 //return newly infected nodes for 'day'
 Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsigned int))
@@ -152,8 +204,10 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
           bool rewired_to_infected = ((this)->*rewire)(u,v,day);
           if(rewired_to_infected)
           {
+            //std::cout << transmission_probability << "\n";  
             if (transmission_probability==1 || SampleProbability(transmission_probability)==1)
-            {                    
+            {   
+                
               new_infectious.push_back(v);
               
             }
@@ -170,9 +224,9 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
 *  SI Simulation
 *   Cuts of the recovered part of SIR output
 ********************************************************************/
-Graph::GroupResult Graph::SI_simulation(int inode, int iday)
+Graph::GroupResult Graph::SI_simulation(int inode, int iday, unsigned int STATIC)
 {
-  auto infected_recovered_farms = SIR_simulation(inode,iday,DAYS);
+  auto infected_recovered_farms = SIR_simulation(inode,iday,DAYS, STATIC);
   auto infectedFarms = Graph::GroupResult (infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
   
   return infectedFarms;
@@ -182,9 +236,10 @@ Graph::GroupResult Graph::SI_simulation(int inode, int iday)
 *  SIS Simulation
 *  Cuts of the recovered part of SIX output
 ********************************************************************/
-Graph::GroupResult Graph::SIS_simulation(int inode, int iday, unsigned int infection_period)
+Graph::GroupResult Graph::SIS_simulation(int inode, int iday,
+ unsigned int infection_period, unsigned int STATIC)
 {
-  auto infected_recovered_farms = SIX_simulation(inode,iday,infection_period,0);
+  auto infected_recovered_farms = SIX_simulation(inode,iday,infection_period,0, STATIC);
  
   // discard the recovered part
   auto infectedFarms = Graph::GroupResult(infected_recovered_farms.begin(),infected_recovered_farms.begin()+DAYS);
@@ -198,9 +253,10 @@ Graph::GroupResult Graph::SIS_simulation(int inode, int iday, unsigned int infec
 *  SIR Simulation
 *
 ********************************************************************/
-Graph::GroupResult Graph::SIR_simulation(int inode, int iday, unsigned int infection_period)
+Graph::GroupResult Graph::SIR_simulation(int inode, int iday,
+ unsigned int infection_period, unsigned int STATIC)
 {
-  return SIX_simulation(inode,iday,infection_period,1);
+  return SIX_simulation(inode,iday,infection_period,1, STATIC);
 }
 
 
@@ -209,7 +265,8 @@ Graph::GroupResult Graph::SIR_simulation(int inode, int iday, unsigned int infec
 *  Template for SIR and SIS simulations   
 *
 ********************************************************************/
-Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infection_period,const int KEEP_RECOVERED)
+Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infection_period,
+  const int KEEP_RECOVERED,unsigned int STATIC)
 {
   auto infected_recovered_farms = Graph::GroupResult(2*DAYS);
   
@@ -220,8 +277,9 @@ Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infec
 
   for (unsigned int day = iday; day < DAYS; day++)
   {     
+    infectionSweep(day, infection_period,1460,STATIC);
     
-    infectionSweep(day, infection_period);
+    
     if(infection_period<DAYS){
       recoverySweep(day,KEEP_RECOVERED);
     }
@@ -244,6 +302,26 @@ Graph::GroupResult Graph::SIS_rewire_simulation(	int inode,
 														unsigned int detection_period
 													 )
 { 
+  return SIX_rewire_simulation(inode, iday, infection_period, detection_period,0);
+  
+}
+
+Graph::GroupResult Graph::SIR_rewire_simulation(	int inode,
+														int iday,
+														unsigned int infection_period,
+														unsigned int detection_period
+													 )
+{ 
+  return SIX_rewire_simulation(inode, iday, infection_period, detection_period,1);
+  
+}
+Graph::GroupResult Graph::SIX_rewire_simulation(	int inode,
+														int iday,
+														unsigned int infection_period,
+														unsigned int detection_period,
+                            const unsigned int KEEP_RECOVERED
+													 )
+{ 
   bool (Graph::*rewire)(int,int,unsigned int) = &Graph::_rewire;
  
   auto infected_farms = Graph::GroupResult(DAYS);
@@ -255,9 +333,9 @@ Graph::GroupResult Graph::SIS_rewire_simulation(	int inode,
   for (unsigned int day = iday; day < DAYS; day++)
   {     
     
-    infectionSweep(day, infection_period,detection_period, rewire);
+    infectionSweep(day, infection_period,detection_period,0, rewire);
     detectionSweep(day);
-    recoverySweep(day,0);
+    recoverySweep(day,KEEP_RECOVERED);
     
     for(unsigned int i=0;i<GROUP_NUMBER;++i){
       infected_farms[day-iday][i] = infected_count[i];
