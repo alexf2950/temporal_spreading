@@ -58,18 +58,13 @@ Graph::GroupResult CallSimulation(Graph& graph, Parameters& p)
       result = graph.SIS_rewire_simulation(p.patient_zero,
                                         p.day_zero,
                                         p.infectious_period,
-<<<<<<< HEAD
-                                        p.detection_period,
-                                        p.OUTPUT_FLAG);
-=======
                                         p.detection_period);
-  } else if (p.simulation_type == "SIR_rewire")
-  {
+   } else if (p.simulation_type == "SIR_rewire")
+   {
       result = graph.SIR_rewire_simulation(p.patient_zero,
                                         p.day_zero,
                                         p.infectious_period,
                                         p.detection_period);
->>>>>>> c745e2e3c1297858514531d8f4fdb12d20f5db6d
   }
   
   return result;
@@ -96,12 +91,6 @@ std::array<double,2> GetOriginalAndRewiredInfectionCounts(Graph& graph, Paramete
   counts[1]= rewired_count/(double)p.sample_size;
  
   return counts;
-}
-
-void printInfectedAndDetectedCounts(Graph& graph, Parameters& p)
-{
-  p.OUTPUT_FLAG = 1;
-  printEndemicFractions(graph, p);
 }
 
 std::vector<unsigned int> GetFinalInfectionSizes(Graph& graph, Parameters& p)
@@ -167,7 +156,7 @@ int parseInput(Parameters& p, int argc, char** argv)
 {
   if (argc<2)
   {
-    std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire', 'SIR_rewire'}";
+     std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire', 'SIR_rewire'}";
     return 1;
   }
   
@@ -233,11 +222,7 @@ int parseInput(Parameters& p, int argc, char** argv)
   p.use_groups = atoi(argv[2]);
   p.transmission_probability = atof(argv[3]);
   p.RANDOM_FLAG = atoi(argv[4]);
-<<<<<<< HEAD
-  p.OUTPUT_FLAG = 0;
-=======
   p.use_static_network = atoi(argv[5]);
->>>>>>> c745e2e3c1297858514531d8f4fdb12d20f5db6d
   
   return 0;
 } 
@@ -246,9 +231,7 @@ int parseInput(Parameters& p, int argc, char** argv)
 int main(int argc, char** argv)
 {
   Parameters parameters;
-  
   parameters.detection_period = 0;
-  
   if(parseInput(parameters, argc, argv)==1)
   {
     return 1;
@@ -262,7 +245,7 @@ int main(int argc, char** argv)
   const unsigned int EDGE_NUMBER = 6359697;
   //const unsigned int EDGE_NUMBER = 747746;
   
-  std::string OUTPUT_FILENAME = "output/SIS/"+ parameters.simulation_type +
+  std::string OUTPUT_FILENAME = "/home/afengler/Dokumente/traversal/SIS/"+ parameters.simulation_type +
                                   "_infection_period="+ std::to_string(parameters.infectious_period) +
                                   "_detection_period="+ std::to_string(parameters.detection_period) +".txt";
   
@@ -279,30 +262,22 @@ int main(int argc, char** argv)
   
   unsigned int RANDOM_FLAG = parameters.RANDOM_FLAG; // 0 means original network, 1 temporal randomized
   
-<<<<<<< HEAD
   ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
   //ReadEdgesTxt(std::string("/home/afengler/Dokumente/data/LuisRocha_sexnet_pnas.txt"), edges);
-=======
-
-  //ReadEdgesTxt(std::string("/home/afengler/Dokumente/traversal/edges_subset.txt"), edges);
->>>>>>> c745e2e3c1297858514531d8f4fdb12d20f5db6d
   //WriteEdgesToFile(edges,std::string("edges_c.dat"));
-
+  
   
   Graph::NodeProperty groups;
   unsigned int group_number;
 
   
+
+  
   if (parameters.use_groups)
   {
-<<<<<<< HEAD
       group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/community_groups_0.txt"),
-=======
-      group_number = ReadGroups(//std::string("/home/afengler/Dokumente/traversal/groups.txt"),
-                                std::string("/home/alex/Documents/data/groups.txt"),
->>>>>>> c745e2e3c1297858514531d8f4fdb12d20f5db6d
                                 groups);
-  }
+                                }
   
     
   if (parameters.use_static_network==1)
