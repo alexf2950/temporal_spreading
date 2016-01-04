@@ -40,20 +40,28 @@ Graph::GroupResult CallSimulation(Graph& graph, Parameters& p)
   Graph::GroupResult result;
   if (p.simulation_type == "SI")
   { 
-      result = graph.SI_simulation(p.patient_zero, p.day_zero);
+      result = graph.SI_simulation(p.patient_zero, p.day_zero, p.use_static_network);
   } else if (p.simulation_type == "SIR")
   {
       result = graph.SIR_simulation(p.patient_zero,
                                         p.day_zero,
-                                        p.infectious_period);
+                                        p.infectious_period,
+                                        p.use_static_network);
   } else if (p.simulation_type == "SIS")
   {
       result = graph.SIS_simulation(p.patient_zero,
                                         p.day_zero,
-                                        p.infectious_period);
+                                        p.infectious_period,
+                                        p.use_static_network);
   } else if (p.simulation_type == "SIS_rewire")
   {
       result = graph.SIS_rewire_simulation(p.patient_zero,
+                                        p.day_zero,
+                                        p.infectious_period,
+                                        p.detection_period);
+  } else if (p.simulation_type == "SIR_rewire")
+  {
+      result = graph.SIR_rewire_simulation(p.patient_zero,
                                         p.day_zero,
                                         p.infectious_period,
                                         p.detection_period);
@@ -126,16 +134,16 @@ int parseInput(Parameters& p, int argc, char** argv)
 {
   if (argc<2)
   {
-    std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire'}";
+    std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire', 'SIR_rewire'}";
     return 1;
   }
   
   std::string name = argv[1];
-  
+  const unsigned int BASE_PARAMETERS = 6;
   
   if (name=="SI")
   {
-    if (argc!=5)
+    if (argc!=BASE_PARAMETERS)
     {
       std::cout << "Usage: ./run 'SI' use_groups transmission_probability RANDOM_FLAG";
       return 1;
@@ -145,32 +153,44 @@ int parseInput(Parameters& p, int argc, char** argv)
     
   } else if (name=="SIR")
   {
-    if (argc!=6)
+    if (argc!=BASE_PARAMETERS+1)
     {
-      std::cout << "Usage: 'SIR' use_groups transmission_probability RANDOM_FLAG infection_period";
+      std::cout << "Usage: 'SIR' use_groups transmission_probability RANDOM_FLAG STATIC infection_period";
       return 1;
     }
     p.simulation_type = "SIR";
-    p.infectious_period = atoi(argv[5]);
+    p.infectious_period = atoi(argv[BASE_PARAMETERS]);
   } else if (name=="SIS")
   {
-    if (argc!=6)
+    if (argc!=BASE_PARAMETERS+1)
     {
-      std::cout << "Usage: 'SIS' use_groups transmission_probability RANDOM_FLAG infection_period";
+      std::cout << "Usage: 'SIS' use_groups transmission_probability RANDOM_FLAG STATIC infection_period";
       return 1;
     }
     p.simulation_type = "SIS";
-    p.infectious_period = atoi(argv[5]);
+    p.infectious_period = atoi(argv[BASE_PARAMETERS]);
   } else if (name=="SIS_rewire")
   {
-    if (argc!=7)
+    if (argc!=BASE_PARAMETERS+2)
     {
-      std::cout << "Usage: 'SIS_rewire' use_groups transmission_probability RANDOM_FLAG infection_period detection_period";
+      std::cout << "Usage: 'SIS_rewire' use_groups transmission_probability RANDOM_FLAG STATIC infection_period detection_period";
       return 1;
     }
+    
     p.simulation_type = "SIS_rewire";
-    p.infectious_period = atoi(argv[5]);
-    p.detection_period = atoi(argv[6]);
+    p.infectious_period = atoi(argv[BASE_PARAMETERS]);
+    p.detection_period = atoi(argv[BASE_PARAMETERS+1]);
+  } else if (name=="SIR_rewire")
+  {
+    if (argc!=BASE_PARAMETERS+2)
+    {
+      std::cout << "Usage: 'SIS_rewire' use_groups transmission_probability RANDOM_FLAG STATIC infection_period detection_period";
+      return 1;
+    }
+    
+    p.simulation_type = "SIR_rewire";
+    p.infectious_period = atoi(argv[BASE_PARAMETERS]);
+    p.detection_period = atoi(argv[BASE_PARAMETERS+1]);
   } else
   {
     std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire'}";
@@ -178,8 +198,9 @@ int parseInput(Parameters& p, int argc, char** argv)
   }
   
   p.use_groups = atoi(argv[2]);
-  p.transmission_probability = atoi(argv[3]);
+  p.transmission_probability = atof(argv[3]);
   p.RANDOM_FLAG = atoi(argv[4]);
+  p.use_static_network = atoi(argv[5]);
   
   return 0;
 } 
@@ -188,6 +209,8 @@ int parseInput(Parameters& p, int argc, char** argv)
 int main(int argc, char** argv)
 {
   Parameters parameters;
+  
+  parameters.detection_period = 0;
   
   if(parseInput(parameters, argc, argv)==1)
   {
@@ -202,7 +225,7 @@ int main(int argc, char** argv)
   const unsigned int EDGE_NUMBER = 6359697;
   //const unsigned int EDGE_NUMBER = 747746;
   
-  std::string OUTPUT_FILENAME = "/home/afengler/Dokumente/traversal/SIS/"+ parameters.simulation_type +
+  std::string OUTPUT_FILENAME = "output/SIS/"+ parameters.simulation_type +
                                   "_infection_period="+ std::to_string(parameters.infectious_period) +
                                   "_detection_period="+ std::to_string(parameters.detection_period) +".txt";
   
@@ -219,21 +242,34 @@ int main(int argc, char** argv)
   
   unsigned int RANDOM_FLAG = parameters.RANDOM_FLAG; // 0 means original network, 1 temporal randomized
   
-  ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
+
   //ReadEdgesTxt(std::string("/home/afengler/Dokumente/traversal/edges_subset.txt"), edges);
   //WriteEdgesToFile(edges,std::string("edges_c.dat"));
-  
+
   
   Graph::NodeProperty groups;
   unsigned int group_number;
 
   
-
-  
   if (parameters.use_groups)
   {
-      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups.txt"),
+      group_number = ReadGroups(//std::string("/home/afengler/Dokumente/traversal/groups.txt"),
+                                std::string("/home/alex/Documents/data/groups.txt"),
                                 groups);
+  }
+  
+    
+  if (parameters.use_static_network==1)
+  {
+    //ReadEdgesC(std::string("data/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
+    //std::string static_network_file = "data/edges_static.dat";
+    //aggregateNetwork(edges,groups,group_number,static_network_file);
+    edges.resize(97980);
+    ReadEdgesC(std::string("data/edges_static.dat"), edges, 315267, RANDOM_FLAG);
+    //return 1;
+  } else
+  {
+    ReadEdgesC(std::string("data/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
   }
   
   Graph graph = Graph(edges, NODE_NUMBER, groups, group_number);

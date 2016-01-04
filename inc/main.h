@@ -12,8 +12,9 @@ struct Parameters{
   unsigned int infectious_period;
   unsigned int detection_period;
   unsigned int use_groups;
-  unsigned int transmission_probability;
+  double transmission_probability;
   unsigned int RANDOM_FLAG; // 0 means original network, 1 temporal randomized
+  unsigned int use_static_network;
   
   std::string out_file_name;
   std::string simulation_type;

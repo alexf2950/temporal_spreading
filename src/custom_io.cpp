@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <random>
+#include <map>
 #include "graph.h"
 #include "custom_io.h"
 
@@ -108,4 +109,51 @@ unsigned int ReadGroups(std::string filename, Graph::NodeProperty& groups ){
 	
 	
 	return max_group+1;
+}
+
+void aggregateNetwork(Graph::DayEdges& edges, Graph::NodeProperty& groups,
+ unsigned int group_number, std::string out_filename)
+{
+	std::map<Graph::EDGE,unsigned int> edge_count_map;
+	std::vector<std::vector<unsigned int>> group_coupling(group_number);
+	
+	for (unsigned int i  = 0;i<group_number;++i)
+	{
+		group_coupling[i].assign(group_number,0);
+	}
+	
+	for(unsigned int day = 0;day<edges.size();++day){
+		auto day_list = edges[day];
+		
+		for (auto edge = day_list.begin();edge!=day_list.end();++edge){
+			edge_count_map[*edge]++;
+			
+			//coupling matrix
+			unsigned int source = (*edge)[0];
+			unsigned int target = (*edge)[1];
+			group_coupling[groups[source]][groups[target]]+=1;
+		}
+		
+		edges[day].clear();
+	}
+	
+	std::ofstream file;
+	file.open("data/coupling_matrix_.txt",std::ofstream::out | std::ofstream::trunc);
+	
+	for (unsigned int i  = 0;i<group_number;++i)
+	{
+		for (unsigned int j  = 0;j<group_number;++j)
+		{
+			file << group_coupling[i][j] << " ";
+		}
+		file << "\n";
+	}
+	file.close();
+	
+	edges.resize(97980);
+	for (auto edge = edge_count_map.begin();edge!=edge_count_map.end();++edge){
+			edges[edge->first[0]].push_back(edge->first);
+		}
+	WriteEdgesToFile(edges,out_filename);
+	return;
 }
