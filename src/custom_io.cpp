@@ -60,23 +60,34 @@ void ReadEdgesTxt(std::string filename, Graph::DayEdges& edges ){
 	file.open (filename, std::ifstream::in); 
 	
 	std::string line, number;
+	char seperator = '\t';
 	
 	unsigned int index=0;
+	unsigned int max_day=0;
+	unsigned int max_index=0;
 	unsigned int day,source,target;
 
 	while(std::getline(file,line,'\n'))
     {	
 		std::istringstream line_iss(line);
-		std::getline(line_iss,number, '\t');
+		std::getline(line_iss,number, seperator);
 		source = stoi(number);
-		std::getline(line_iss,number, '\t');
+		std::getline(line_iss,number, seperator);
 		target = stoi(number);
-		std::getline(line_iss,number, '\t');
+		std::getline(line_iss,number, seperator);
 		day = stoi(number);
+		
+		if(day>max_day)
+			max_day = day;
+		if(source>max_index)
+			max_index = source;
+		if(target>max_index)
+			max_index = target;		
 		
 		edges[day].push_back(Graph::EDGE({source,target}));
     }
 	
+	std::cout << "DAYS = " << max_day << " NODE_NUMBER = " << max_index << "\n";
 	
 	file.close();
 	

@@ -29,4 +29,9 @@ double 						    GetMeanFinalInfectionSize(Graph& graph, Parameters& p);
 double                GetEndemicFraction(Graph& graph, Parameters& p);
 void 						      printEndemicFractions(Graph& graph, Parameters& p);
 
+
+// Do p.sample_size runs with fixed initial node p.patient_zero and return the average number of infections via orignal
+// and recovered edges. Make sure p.simulation_type is "SIS_rewire" and to set patien_zero to work properly
+std::array<double,2> GetOriginalAndRewiredInfectionCounts(Graph& graph, Parameters& p);
+
 #endif

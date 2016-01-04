@@ -56,12 +56,41 @@ Graph::GroupResult CallSimulation(Graph& graph, Parameters& p)
       result = graph.SIS_rewire_simulation(p.patient_zero,
                                         p.day_zero,
                                         p.infectious_period,
-                                        p.detection_period);
+                                        p.detection_period,
+                                        p.OUTPUT_FLAG);
   }
   
   return result;
 }
 
+std::array<double,2> GetOriginalAndRewiredInfectionCounts(Graph& graph, Parameters& p)
+{
+  std::array<double,2> counts;
+  unsigned int original_count = 0;
+  unsigned int rewired_count = 0;
+  
+  for (unsigned int n=0;n<p.sample_size; ++n)
+  {
+
+    CallSimulation(graph,p);
+    for (unsigned int i=0; i < graph.GROUP_NUMBER;++i)
+    {
+      original_count += graph.original_infections[i];
+      rewired_count += graph.rewired_infections[i];
+    }
+    
+  }
+  counts[0]= original_count/(double)p.sample_size;
+  counts[1]= rewired_count/(double)p.sample_size;
+ 
+  return counts;
+}
+
+void printInfectedAndDetectedCounts(Graph& graph, Parameters& p)
+{
+  p.OUTPUT_FLAG = 1;
+  printEndemicFractions(graph, p);
+}
 
 std::vector<unsigned int> GetFinalInfectionSizes(Graph& graph, Parameters& p)
 {
@@ -180,6 +209,7 @@ int parseInput(Parameters& p, int argc, char** argv)
   p.use_groups = atoi(argv[2]);
   p.transmission_probability = atoi(argv[3]);
   p.RANDOM_FLAG = atoi(argv[4]);
+  p.OUTPUT_FLAG = 0;
   
   return 0;
 } 
@@ -220,7 +250,7 @@ int main(int argc, char** argv)
   unsigned int RANDOM_FLAG = parameters.RANDOM_FLAG; // 0 means original network, 1 temporal randomized
   
   ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
-  //ReadEdgesTxt(std::string("/home/afengler/Dokumente/traversal/edges_subset.txt"), edges);
+  //ReadEdgesTxt(std::string("/home/afengler/Dokumente/data/LuisRocha_sexnet_pnas.txt"), edges);
   //WriteEdgesToFile(edges,std::string("edges_c.dat"));
   
   
@@ -232,27 +262,29 @@ int main(int argc, char** argv)
   
   if (parameters.use_groups)
   {
-      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups.txt"),
+      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/community_groups_0.txt"),
                                 groups);
   }
   
   Graph graph = Graph(edges, NODE_NUMBER, groups, group_number);
   graph.transmission_probability = parameters.transmission_probability;
   
+  
   /*std::ofstream file;
   file.open (parameters.out_file_name);
 
+  parameters.patient_zero = 3;
   
-  
-  for(unsigned int i = 1;i<parameters.infectious_period && i<30;++i){
-    parameters.detection_period=i;
-    auto mean_final_fraction = GetEndemicFraction(graph,parameters);
-    file << mean_final_fraction << " ";
+  for(unsigned int i = 1;i<16;++i){
+    parameters.detection_period+=1;
+    auto orig_and_rewired_counts = GetOriginalAndRewiredInfectionCounts(graph,parameters);
+    file << orig_and_rewired_counts[0] << " " << orig_and_rewired_counts[1] << "\n";
   }
   
   file.close();*/
   
-  printEndemicFractions(graph, parameters);
+  printEndemicFractions(graph,parameters);
+  //printInfectedAndDetectedCounts(graph, parameters);
   
   return 0;
 }

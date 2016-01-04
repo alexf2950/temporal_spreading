@@ -48,7 +48,8 @@ class Graph{
 	double transmission_probability = 1; 
 	
 	
-	std::vector<unsigned int> infected_count, recovered_count, detected_count;
+	std::vector<unsigned int> infected_count, recovered_count, detected_count,
+								original_infections, rewired_infections;
 	unsigned int summed_infected_count;
 	
 	std::vector<unsigned int> group_counts;

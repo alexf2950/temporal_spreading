@@ -46,6 +46,7 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     recovery.clear();
     recovery[iday +infection_period].push_back(inode);
     
+    original_infections.assign(GROUP_NUMBER,0);
     
     return;
 }
@@ -58,6 +59,10 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     detection[iday + detection_period].push_back(inode);
     
     detected_count.assign(GROUP_NUMBER,0);
+    
+    rewired_infections.assign(GROUP_NUMBER,0);
+    
+    
     
     return;
 }
@@ -81,7 +86,7 @@ void Graph::infectionSweep(unsigned int day, unsigned int infection_period,
 	if (summed_infected_count>0)
 	{
 		NodeSet new_infectious = infect(day,rewire);
-		summed_infected_count +=Unite(this, new_infectious);
+		summed_infected_count += Unite(this, new_infectious);
     
     // Node gets marked for recovery after infection period
     if(infection_period<DAYS){
@@ -148,7 +153,7 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
           if(rewired_to_infected)
           {
             if (transmission_probability==1 || SampleProbability(transmission_probability)==1)
-            {       
+            {                    
               new_infectious.push_back(v);
               
             }
@@ -274,13 +279,19 @@ bool Graph::_rewire(int source, int target, unsigned int day)
     unsigned int seemingly_uninfected = group_counts[groups[source]]-detected_count[groups[source]];
     
     double infection_probability = latent_infected/(double)seemingly_uninfected;    
+    //double infection_probability = infected_count[groups[source]]/(double)seemingly_uninfected;    
     
     if(SampleProbability(infection_probability)==0){
       return false;
       
     }
+    
+    rewired_infections[groups[target]]+=1;
+  } else
+  {
+    original_infections[groups[target]]+=1;
   }
-
+  
   return true;
 }
 
