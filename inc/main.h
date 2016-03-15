@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <json.hpp>
 #include "graph.h"
 
 struct Parameters{
@@ -17,18 +18,25 @@ struct Parameters{
   unsigned int use_static_network;
   
   std::string out_file_name;
+  std::string output_path;
+  std::string input_file;
   std::string simulation_type;
 };
 
 int 						  parseInput(Parameters& p, int argc, char** argv);
+int               parseSettings(nlohmann::json& settings, Parameters& p);
 double 						getMean(std::vector<unsigned int>& vector);
 double            GetFraction(std::vector<unsigned int>& vector,bool (*condition)(unsigned int));
 
 Graph::GroupResult 	  CallSimulation(Graph& graph, Parameters& p);
 std::vector<unsigned int> 	  GetFinalInfectionSizes(Graph& graph, Parameters& p);
+std::array<double,2>    GetMeanPeaks(Graph& graph, Parameters& p);
+
 double 						    GetMeanFinalInfectionSize(Graph& graph, Parameters& p);
 double                GetEndemicFraction(Graph& graph, Parameters& p);
 void 						      printEndemicFractions(Graph& graph, Parameters& p);
+void                  printMeanFinalSizes(Graph& graph, Parameters& p);
+void                  printShortestPaths(Graph& graph, Parameters& p);
 
 
 // Do p.sample_size runs with fixed initial node p.patient_zero and return the average number of infections via orignal

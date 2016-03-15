@@ -28,7 +28,8 @@ void WriteEdgesToFile(Graph::DayEdges& edges,std::string filename){
 	std::cout << edgeCounter << "\n";
 }
 
-void ReadEdgesC(std::string filename, Graph::DayEdges& edges, const int EDGE_NUMBER, const int RANDOM_FLAG){
+void ReadEdgesC(std::string filename, Graph::DayEdges& edges, const int EDGE_NUMBER, const int RANDOM_FLAG, 
+						 const unsigned int REVERSED ){
 	std::vector<unsigned int> data(EDGE_NUMBER*3);
 	
 	FILE* file = fopen(filename.c_str(),"rb");
@@ -49,7 +50,15 @@ void ReadEdgesC(std::string filename, Graph::DayEdges& edges, const int EDGE_NUM
 			day = distribution(def_generator);
 		}
 		
-		edges[day].push_back(Graph::EDGE({source,target}));
+		if(REVERSED)
+		{
+			edges[day].push_back(Graph::EDGE({target,source}));
+		}
+		else
+		{		
+			edges[day].push_back(Graph::EDGE({source,target}));
+		}
+
 		
 	}
 	

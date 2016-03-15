@@ -35,6 +35,11 @@ void Graph::initializeInfection(int inode,int iday, unsigned int infection_perio
     infectious.fill(0);
     infectious.at(inode) = 1;
     
+    //infected_by.fill(0);
+    //infected_by.at(inode) = inode;
+    
+    //infection_day.fill(0);
+    
     summed_infected_count = 1;
     infected_count.assign(GROUP_NUMBER,0);
     infected_count[groups[inode]]=1;
@@ -191,10 +196,11 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
   EdgeList day_list = edges[day];
   if (day_list.size()>0)
   {
-    for (auto b = day_list.begin(); b != day_list.end(); ++b)
+    for (unsigned int i = 0;i<day_list.size();++i)
     {
-      int u = (*b)[0]; //source
-      int v = (*b)[1]; //target
+      EDGE& b = day_list[i];
+      int u = (b)[0]; //source
+      int v = (b)[1]; //target
       
       // infections happening here
       // add target to infectious if source is infected and target is neither infected and nor recovered
@@ -209,7 +215,8 @@ Graph::NodeSet Graph::infect(unsigned int day,bool (Graph::*rewire)(int,int,unsi
             {   
                 
               new_infectious.push_back(v);
-              
+              //infected_by.at(v) = u;
+              //infection_day.at(v) = day;
             }
           }
         }
@@ -268,7 +275,7 @@ Graph::GroupResult Graph::SIR_simulation(int inode, int iday,
 Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infection_period,
   const int KEEP_RECOVERED,unsigned int STATIC)
 {
-  auto infected_recovered_farms = Graph::GroupResult(2*DAYS);
+  auto infected_recovered_farms = Graph::GroupResult(DAYS);
   
   InitializeResultVector(GROUP_NUMBER, infected_recovered_farms);
   
@@ -278,7 +285,7 @@ Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infec
   for (unsigned int day = iday; day < DAYS; day++)
   {     
     infectionSweep(day, infection_period,1460,STATIC);
-    
+    //std::cout << day << "\n";
     
     if(infection_period<DAYS){
       recoverySweep(day,KEEP_RECOVERED);
@@ -286,7 +293,7 @@ Graph::GroupResult Graph::SIX_simulation(int inode, int iday, unsigned int infec
     
     for(unsigned int i=0;i<GROUP_NUMBER;++i){
       infected_recovered_farms[day-iday][i] = infected_count[i];
-      infected_recovered_farms[DAYS+(day-iday)][i] = recovered_count[i];
+      //infected_recovered_farms[DAYS+(day-iday)][i] = recovered_count[i];
     }
     
   }

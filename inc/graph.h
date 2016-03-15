@@ -57,6 +57,8 @@ class Graph{
 	// Vectors representing the state of the infection
 	NodeProperty infectious,recovered;
 	
+	NodeProperty infected_by,infection_day;
+	
 	
 	NodeProperty groups;
 	

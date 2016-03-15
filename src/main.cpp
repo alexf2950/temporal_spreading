@@ -6,10 +6,12 @@
 #include <iostream>
 #include <stdlib.h> 
 #include <string>
-
+#include <cstring>
+#include <json.hpp>
 
 #include "graph.h"
 #include "custom_io.h"
+
 
 
 
@@ -95,22 +97,74 @@ std::array<double,2> GetOriginalAndRewiredInfectionCounts(Graph& graph, Paramete
 
 std::vector<unsigned int> GetFinalInfectionSizes(Graph& graph, Parameters& p)
 {
+  const unsigned int SAMPLES = 5;
   std::vector<unsigned int> final_endemic_fraction(p.sample_size);
   
   for (unsigned int n=0;n<p.sample_size; ++n)
   {
     p.patient_zero = n;
     auto infected_recovered_farms = CallSimulation(graph,p);
-    for (auto it= infected_recovered_farms[infected_recovered_farms.size()-1].begin();
-              it!=infected_recovered_farms[infected_recovered_farms.size()-1].end();++it)
+    for(unsigned int k=0;k<SAMPLES;++k)
     {
-      final_endemic_fraction[n]+=(*it);
+       for (auto it= infected_recovered_farms[infected_recovered_farms.size()-1-k].begin();
+                  it!=infected_recovered_farms[infected_recovered_farms.size()-1-k].end();++it)
+        {
+          final_endemic_fraction[n]+=(*it);
+        }
     }
+    final_endemic_fraction[n]/=SAMPLES;
+       
     
   }
   
   return final_endemic_fraction;
 }
+
+
+std::array<double,2> GetMeanPeaks(Graph& graph, Parameters& p)
+{
+  std::vector<unsigned int> peaks(p.sample_size);
+  std::vector<unsigned int> peak_times(p.sample_size);
+  
+  for (unsigned int n=0;n<p.sample_size; ++n)
+  {
+    p.patient_zero = n;
+    auto infected_recovered_farms = CallSimulation(graph,p);
+    std::vector<double> summed(infected_recovered_farms.size());
+    summed.assign(infected_recovered_farms.size(),0);
+    
+    for(unsigned int k=0;k<infected_recovered_farms.size();++k)
+    {
+       for (auto it= infected_recovered_farms[k].begin();
+                  it!=infected_recovered_farms[k].end();++it)
+        {
+          summed[k]+=(*it);
+        }  
+    }
+    
+    unsigned int max = 0;
+    unsigned int argmax =0;
+    
+    for(unsigned int k=0;k<summed.size();++k)
+    {
+      if(summed[k]>max)
+      {
+        max = summed[k];
+        argmax = k;
+      }
+    }
+    peak_times[n] = argmax;
+    peaks[n] = max;
+              
+  }
+  
+  std::array<double,2> peak_values;
+  peak_values[0] = getMean(peak_times);
+  peak_values[1] = getMean(peaks);
+  
+  return peak_values;
+}
+
 
 double GetEndemicFraction(Graph& graph, Parameters& p)
 {
@@ -124,6 +178,55 @@ double GetMeanFinalInfectionSize(Graph& graph, Parameters& p)
   return getMean(final_sizes);
 }
 
+void printMeanFinalSizes(Graph& graph, Parameters& p)
+{
+  p.out_file_name = p.output_path + p.simulation_type +
+                                  "_infection_period="+ std::to_string(p.infectious_period) +
+                                  "_detection_period="+ std::to_string(p.detection_period) +".txt";
+  if(p.use_groups ==1)
+  {
+    p.out_file_name.replace(p.out_file_name.length()-4,11,"_groups.txt");
+  }
+  std::ofstream file;
+  file.open (p.out_file_name);
+  
+  if(p.simulation_type == "SIS")
+  {
+        const unsigned int MAX = p.infectious_period;
+        for(unsigned int i = 1;i<MAX+1;++i){
+          p.infectious_period =i;
+          double finalSize = GetMeanFinalInfectionSize(graph,p);
+          file << finalSize << " ";
+        }
+  } else if(p.simulation_type == "SIS_rewire")
+  {
+        const unsigned int MAX = p.infectious_period;
+        for(unsigned int i = 1;i<MAX;++i){
+          p.detection_period =i;
+          double finalSize = GetMeanFinalInfectionSize(graph,p);
+          file << finalSize << " ";
+        }
+  } else if(p.simulation_type == "SIR")
+  {
+        const unsigned int MAX = p.infectious_period;
+        for(unsigned int i = 1;i<MAX;++i){
+          p.infectious_period =i;
+          std::array<double,2> peak = GetMeanPeaks(graph,p);
+          file << peak[0] << " " << peak[1] << "\n";
+        }
+  } else if(p.simulation_type == "SIR_rewire")
+  {
+        const unsigned int MAX = p.infectious_period;
+        for(unsigned int i = 1;i<MAX;++i){
+          p.detection_period =i;
+          std::array<double,2> peak = GetMeanPeaks(graph,p);
+          file << peak[0] << " " << peak[1] << "\n";
+        }
+  }
+  
+  
+  file.close();
+}
 
 void printEndemicFractions(Graph& graph, Parameters& p)
 {
@@ -151,6 +254,46 @@ void printEndemicFractions(Graph& graph, Parameters& p)
   file.close();
 }
 
+void printShortestPaths(Graph& graph, Parameters& p)
+{
+  p.out_file_name.replace(p.out_file_name.length()-4,9,"_days.txt");
+  
+  std::ofstream file;
+  file.open (p.out_file_name);
+
+  graph.DAYS = 1460;
+  
+  for (unsigned int n=0;n<p.sample_size; ++n)
+  {
+    p.patient_zero = n;
+    CallSimulation(graph,p);
+    auto infection_day = graph.infection_day;
+    auto infected_by = graph.infected_by;
+    for (int d = 0; d < infection_day.size(); ++d)
+    {
+      /*if (infection_day[d]>170)
+      {
+        unsigned int target_node = d;
+        unsigned int source_node = infected_by[d];
+        while(target_node!=source_node)
+        {
+          file << target_node << " ";
+          target_node = source_node;
+          source_node = infected_by[source_node];
+        }
+        file << target_node << "\n";
+        
+        
+      }*/
+      file << infection_day[d] << " ";     
+    }
+    file << "\n";
+  }
+
+
+  file.close();
+}
+
 
 int parseInput(Parameters& p, int argc, char** argv)
 {
@@ -160,7 +303,7 @@ int parseInput(Parameters& p, int argc, char** argv)
     return 1;
   }
   
-  std::string name = argv[1];
+  std::string name(argv[1]);
   const unsigned int BASE_PARAMETERS = 6;
   
   if (name=="SI")
@@ -211,11 +354,11 @@ int parseInput(Parameters& p, int argc, char** argv)
     }
     
     p.simulation_type = "SIR_rewire";
-    p.infectious_period = atoi(argv[BASE_PARAMETERS]);
+    p.infectious_period  = atoi(argv[BASE_PARAMETERS]);
     p.detection_period = atoi(argv[BASE_PARAMETERS+1]);
   } else
   {
-    std::cout << "First parameter is type = {'SI','SIR','SIS','SIS_rewire'}";
+    std::cout << "First parameter is of type = {'SI','SIR','SIS','SIS_rewire'}";
     return 1;
   }
   
@@ -224,20 +367,95 @@ int parseInput(Parameters& p, int argc, char** argv)
   p.RANDOM_FLAG = atoi(argv[4]);
   p.use_static_network = atoi(argv[5]);
   
+  p.day_zero=0;
+  
   return 0;
 } 
+
+int parseSettings(nlohmann::json& settings, Parameters& p){
+  
+  std::vector<std::string> params = {"simulation_type",
+                                      "use_groups",
+                                      "transmission_probability",
+                                      "RANDOM_FLAG",
+                                      "use_static_network",
+                                      "infectious_period",
+                                      "detection_period",
+                                      "input_file",
+                                      "output_path"
+                                      };
+                             
+  for(auto it=params.begin();it!=params.end();++it)
+  {
+    if(settings[*it].is_null()){
+     std::cout << "Warning: " << *it << " missing in settings file";
+    }
+  }
+
+
+  p.simulation_type = settings["simulation_type"];
+  p.use_groups = settings["use_groups"];
+  p.transmission_probability = settings["transmission_probability"];
+  p.RANDOM_FLAG = settings["RANDOM_FLAG"];
+  p.use_static_network = settings["use_static_network"];
+  p.infectious_period = settings["infectious_period"];
+  p.detection_period = settings["detection_period"];
+  p.output_path = settings["output_path"];
+  p.input_file = settings["input_file"];
+  
+
+  return 1;
+}
+
+nlohmann::json readSettings(){
+  std::ifstream json_file("settings.json");
+  nlohmann::json settings(json_file);
+  settings << json_file;
+ 
+  
+  json_file.close();
+  
+  return settings;
+}
+
+bool binaryExists(const std::string& name){
+  std::string binary_path = name;
+  binary_path.replace(binary_path.length()-4,9,"_c.dat");
+  
+  std::ifstream f(binary_path.c_str());
+  if (f.good()) {
+      f.close();
+      return true;
+  } else {
+      f.close();
+      return false;
+  } 
+    
+}
 
 
 int main(int argc, char** argv)
 {
   Parameters parameters;
   parameters.detection_period = 0;
+  
   if(parseInput(parameters, argc, argv)==1)
   {
     return 1;
   }
   
   
+  nlohmann::json settings = readSettings();
+ 
+  // Try settings file, if empty fall back to command line input
+  if (settings.size()>0) parseSettings(settings,parameters);
+    else {
+      if(parseInput(parameters, argc, argv)==1)
+      {
+        return 1;
+      }
+    }
+ 
   
   
   
@@ -245,7 +463,7 @@ int main(int argc, char** argv)
   const unsigned int EDGE_NUMBER = 6359697;
   //const unsigned int EDGE_NUMBER = 747746;
   
-  std::string OUTPUT_FILENAME = "/home/afengler/Dokumente/traversal/SIS/"+ parameters.simulation_type +
+  std::string OUTPUT_FILENAME = parameters.output_path + parameters.simulation_type +
                                   "_infection_period="+ std::to_string(parameters.infectious_period) +
                                   "_detection_period="+ std::to_string(parameters.detection_period) +".txt";
   
@@ -262,9 +480,16 @@ int main(int argc, char** argv)
   
   unsigned int RANDOM_FLAG = parameters.RANDOM_FLAG; // 0 means original network, 1 temporal randomized
   
-  ReadEdgesC(std::string("/home/afengler/Dokumente/traversal/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
-  //ReadEdgesTxt(std::string("/home/afengler/Dokumente/data/LuisRocha_sexnet_pnas.txt"), edges);
-  //WriteEdgesToFile(edges,std::string("edges_c.dat"));
+  if(!binaryExists(parameters.input_file)){
+    ReadEdgesTxt(parameters.input_file, edges);
+    WriteEdgesToFile(edges,std::string("edges_c.dat"));
+  } else {
+    const unsigned int REVERSE=0;
+    std::string binary_path = parameters.input_file;
+    binary_path.replace(binary_path.length()-4,9,"_c.dat");
+    ReadEdgesC(binary_path, edges, EDGE_NUMBER, RANDOM_FLAG, REVERSE);
+  }
+  
   
   
   Graph::NodeProperty groups;
@@ -275,7 +500,7 @@ int main(int argc, char** argv)
   
   if (parameters.use_groups)
   {
-      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/community_groups_0.txt"),
+      group_number = ReadGroups(std::string("/home/afengler/Dokumente/traversal/groups_old.txt"),
                                 groups);
                                 }
   
@@ -288,9 +513,6 @@ int main(int argc, char** argv)
     edges.resize(97980);
     ReadEdgesC(std::string("data/edges_static.dat"), edges, 315267, RANDOM_FLAG);
     //return 1;
-  } else
-  {
-    ReadEdgesC(std::string("data/edges_c.dat"), edges, EDGE_NUMBER, RANDOM_FLAG);
   }
   
   Graph graph = Graph(edges, NODE_NUMBER, groups, group_number);
@@ -310,8 +532,10 @@ int main(int argc, char** argv)
   
   file.close();*/
   
+  //printMeanFinalSizes(graph,parameters);
   printEndemicFractions(graph,parameters);
   //printInfectedAndDetectedCounts(graph, parameters);
+  //printShortestPaths(graph,parameters);
   
   return 0;
 }

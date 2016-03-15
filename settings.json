@@ -1,0 +1,11 @@
+ {
+ 	"input_file": "/home/afengler/Dokumente/traversal/edges.dat",
+ 	"output_path": "/home/afengler/Dokumente/traversal/SIS/",
+ 	"simulation_type":"SIS",
+ 	"infectious_period":30,
+ 	"detection_period":0,
+ 	"use_groups":0,
+ 	"transmission_probability":1,
+ 	"RANDOM_FLAG":0,
+ 	"use_static_network":0 
+ }
